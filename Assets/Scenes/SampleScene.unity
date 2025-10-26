@@ -299,6 +299,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0edc1b0f5356c1643a405bbb3df1051a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1646809159}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0edc1b0f5356c1643a405bbb3df1051a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1646809163}
   m_SourcePrefab: {fileID: 100100000, guid: 0edc1b0f5356c1643a405bbb3df1051a, type: 3}
 --- !u!1 &705507993
 GameObject:
@@ -895,6 +898,57 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1635730952
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1635730954}
+  - component: {fileID: 1635730953}
+  m_Layer: 0
+  m_Name: MosquitoLanding
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1635730953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1635730952}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9c5ce2153e828446ab1455961488152, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mosquitoTransform: {fileID: 3830360978023603673, guid: 45697a0b799fc7b43a16cf0593618036, type: 3}
+  landingTarget: {fileID: 1646809161}
+  flySpeed: 5
+  landingSpeed: 1.5
+  rotationSpeed: 10
+  landingDistance: 3.9
+  attachDistance: 0.1
+--- !u!4 &1635730954
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1635730952}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.7386653, y: 2.3555467, z: 0.21652645}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1646809156 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0edc1b0f5356c1643a405bbb3df1051a, type: 3}
@@ -927,6 +981,28 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0edc1b0f5356c1643a405bbb3df1051a, type: 3}
   m_PrefabInstance: {fileID: 464661676}
   m_PrefabAsset: {fileID: 0}
+--- !u!64 &1646809163
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1646809156}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 0}
 --- !u!1 &1757194726
 GameObject:
   m_ObjectHideFlags: 0
@@ -988,3 +1064,4 @@ SceneRoots:
   - {fileID: 1590867136}
   - {fileID: 1757194728}
   - {fileID: 1566701465}
+  - {fileID: 1635730954}
