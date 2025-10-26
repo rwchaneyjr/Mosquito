@@ -162,9 +162,6 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5329593989526854938}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 384627995145398306}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
       insertIndex: -1
@@ -183,20 +180,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
   m_PrefabInstance: {fileID: 3648641919394789938}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &5329593989526854938
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4495715782888327011}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f71a76957eb59c44992847fde9b32e7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  buzzRadius: 4
-  speed: 2
 --- !u!114 &384627995145398306
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -252,9 +235,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   characterRoot: {fileID: 0}
   isLander: 1
-  buzzRadius: 4
-  speed: 2
-  landDuration: 2
+  buzzRadius: 2
+  speed: 1
+  landDuration: 0.2
   landChance: 0.9
 --- !u!1001 &7774008317753202052
 PrefabInstance:

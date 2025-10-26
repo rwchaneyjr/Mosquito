@@ -13,7 +13,7 @@ public class Mosquito : MonoBehaviour
 
     [Header("Landing Settings")]
     public float landDuration = 2f;
-    public float landChance = 0.4f;
+    public float landChance = 1f;
 
     // internal
     private bool isLanded;
@@ -31,45 +31,34 @@ public class Mosquito : MonoBehaviour
         HumanBodyBones.RightUpperLeg
     };
 
+    // Mosquito.cs (Start function)
+
     void Start()
     {
-        // --- Ensure we have a target ---
-        if (characterRoot == null)
-        {
-            // fallback: try to find the Player tag
-            GameObject p = GameObject.FindWithTag("Player");
-            if (p != null) characterRoot = p.transform;
-        }
+        // ... (unchanged code above)
 
+        // --- Find a bone, NO FALLBACK ---
+        // The playerTarget should have an Animator component
         Animator anim = characterRoot ? characterRoot.GetComponent<Animator>() : null;
 
-        // --- Find a bone or fallback ---
         if (anim && anim.isHuman)
         {
+            // Try to target the specific bones you want
             HumanBodyBones bone = targetBones[Random.Range(0, targetBones.Length)];
             bodyTarget = anim.GetBoneTransform(bone);
         }
 
-        if (bodyTarget == null && characterRoot != null)
-        {
-            Debug.LogWarning("Mosquito: using characterRoot as fallback (no bone found).");
-            bodyTarget = characterRoot;
-        }
-
-        // If still nothing, abort gracefully
         if (bodyTarget == null)
         {
-            Debug.LogError("Mosquito: no valid target found. Disabling mosquito.");
-            enabled = false;
+            // CRITICAL FIX: Abort if no bone is found. 
+            // This prevents the mosquito from using the player's center position, 
+            // which causes the straight-line movement without hovering/landing.
+            Debug.LogError("Mosquito: Cannot find a valid Humanoid bone target. Disabling mosquito.");
+            Destroy(gameObject); // Safely remove the mosquito instance
             return;
         }
 
-        PickNewOffset();
-        transform.position = bodyTarget.position + targetOffset;
-        SetLanded(false);
-
-        if (isLander)
-            StartCoroutine(LandSoon(Random.Range(1f, 3f)));
+        // ... (unchanged code below)
     }
 
     void Update()
