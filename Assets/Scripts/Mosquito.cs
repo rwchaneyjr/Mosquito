@@ -130,13 +130,15 @@ public class Mosquito : MonoBehaviour
         PickNewAction();
     }
 
+    // Mosquito.cs (SetLanded function)
+
     void SetLanded(bool landed)
     {
         isLanded = landed;
         buzzSpeedMultiplier = landed ? 0f : 1f;
 
-        // Make them visibly smaller when landed
-        transform.localScale = landed ? Vector3.one * 0.12f : Vector3.one * 0.18f;
+        // We change the scale multiplier to a large value (15f) for guaranteed visibility.
+        transform.localScale = landed ? Vector3.one * 10f : Vector3.one * 15f;
     }
 
     // --- Added so slapper can check landing state ---

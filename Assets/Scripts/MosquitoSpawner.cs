@@ -5,18 +5,23 @@ public class MosquitoSpawner : MonoBehaviour
     [Header("Mosquito")]
     public GameObject mosquitoPrefab;
 
-    [Header("Target (drag your humanoid root)")]
-    public Transform characterRoot;   // <-- set this to Worried_Mouse... in the scene
+    [Header("Target (drag your humanoid root or spawn point)")]
+    public Transform characterRoot;    // <-- set this in the Inspector
 
     [Header("Spawn Settings")]
     public float spawnInterval = 2f;
-    public float spawnRadius = 3f;    // smaller so they appear near you
+    public float spawnRadius = 0.5f;   // Lowered default for closer spawns
 
     void Start()
     {
         if (!mosquitoPrefab)
         {
             Debug.LogError("MosquitoSpawner: Mosquito Prefab is not assigned! Spawning disabled.");
+            return;
+        }
+        if (characterRoot == null)
+        {
+            Debug.LogError("MosquitoSpawner: Character Root is not assigned! Cannot determine spawn point.");
             return;
         }
         InvokeRepeating(nameof(SpawnMosquito), 1f, spawnInterval);
@@ -31,19 +36,25 @@ public class MosquitoSpawner : MonoBehaviour
             Random.Range(0.3f, 1f)
         ).normalized;
 
-        Vector3 spawnPosition = transform.position + dir * spawnRadius;
+        // Use the assigned characterRoot position for spawning
+        Vector3 spawnPosition = characterRoot.position + dir * spawnRadius;
 
         GameObject go = Instantiate(mosquitoPrefab, spawnPosition, Quaternion.identity);
 
         // Hand off the character reference so Mosquito.Start() can find bones
-        var m = go.GetComponent<Mosquito>();
-        if (m != null && characterRoot != null)
+        // We SKIP passing the reference if the user has assigned the Main Camera
+        // to prevent the mosquito from flying to an invalid bone target.
+        if (characterRoot != null && !characterRoot.CompareTag("MainCamera"))
         {
-            m.characterRoot = characterRoot;
+            var m = go.GetComponent<Mosquito>();
+            if (m != null)
+            {
+                m.characterRoot = characterRoot;
+            }
         }
 
-        // Debug line so you know it’s spawning
-        Debug.DrawLine(transform.position, spawnPosition, Color.yellow, 2f);
+        // Debug line to visually confirm spawn location
+        Debug.DrawLine(characterRoot.position, spawnPosition, Color.yellow, 2f);
         Debug.Log($"Spawned mosquito @ {spawnPosition}");
     }
 }
