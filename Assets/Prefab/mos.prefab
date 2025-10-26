@@ -195,7 +195,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f71a76957eb59c44992847fde9b32e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  buzzRadius: 2
+  buzzRadius: 4
   speed: 2
 --- !u!114 &384627995145398306
 MonoBehaviour:
@@ -229,11 +229,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13bb4259222dc3d40af8cbf5453b7263, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  characterRoot: {fileID: 0}
-  buzzRadius: 0.5
+  characterRoot: {fileID: 3830360978023603673}
+  isLander: 0
+  buzzRadius: 4
   speed: 2
   landDuration: 2
-  landChance: 0.3
+  landChance: 0.9
 --- !u!65 &8734561930143420530
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -3,25 +3,24 @@ using System.Collections;
 
 public class Mosquito : MonoBehaviour
 {
-    // ➡️ CHANGED: Now serializing the character's Transform (easier to drag)
     [Header("Target Character Setup")]
-    public Transform characterRoot; // Drag the main character GameObject/Transform here
+    public Transform characterRoot;
+    public bool isLander = false; // set by spawner
 
     [Header("Movement Settings")]
     public float buzzRadius = 0.5f;
     public float speed = 2f;
-    private Vector3 targetOffset;
 
     [Header("Landing Settings")]
-    public float landDuration = 2.0f;
-    public float landChance = 0.3f;
+    public float landDuration = 2f;
+    public float landChance = 0.4f;
 
-    // Internal state
-    private bool isLanded = false;
+    // internal
+    private bool isLanded;
     private Transform bodyTarget;
+    private Vector3 targetOffset;
     private float buzzSpeedMultiplier = 1f;
 
-    // Head, Neck, Arms (Shoulders), and Legs
     private readonly HumanBodyBones[] targetBones = new HumanBodyBones[]
     {
         HumanBodyBones.Head,
@@ -34,36 +33,49 @@ public class Mosquito : MonoBehaviour
 
     void Start()
     {
-        Animator characterAnimator = null;
-
-        // Try to get the Animator from the serialized Transform's GameObject
-        if (characterRoot != null)
+        // --- Ensure we have a target ---
+        if (characterRoot == null)
         {
-            characterAnimator = characterRoot.GetComponent<Animator>();
+            // fallback: try to find the Player tag
+            GameObject p = GameObject.FindWithTag("Player");
+            if (p != null) characterRoot = p.transform;
         }
 
-        // 1. Find and set a random target bone
-        if (characterAnimator != null && characterAnimator.isHuman)
+        Animator anim = characterRoot ? characterRoot.GetComponent<Animator>() : null;
+
+        // --- Find a bone or fallback ---
+        if (anim && anim.isHuman)
         {
-            HumanBodyBones randomBone = targetBones[Random.Range(0, targetBones.Length)];
-            bodyTarget = characterAnimator.GetBoneTransform(randomBone);
+            HumanBodyBones bone = targetBones[Random.Range(0, targetBones.Length)];
+            bodyTarget = anim.GetBoneTransform(bone);
         }
 
+        if (bodyTarget == null && characterRoot != null)
+        {
+            Debug.LogWarning("Mosquito: using characterRoot as fallback (no bone found).");
+            bodyTarget = characterRoot;
+        }
+
+        // If still nothing, abort gracefully
         if (bodyTarget == null)
         {
-            Debug.LogError("Mosquito could not find a valid landing target. Check if Character Root is assigned and has a Humanoid Animator.");
-            Destroy(gameObject);
+            Debug.LogError("Mosquito: no valid target found. Disabling mosquito.");
+            enabled = false;
             return;
         }
 
-        // 2. Initial position
         PickNewOffset();
         transform.position = bodyTarget.position + targetOffset;
         SetLanded(false);
+
+        if (isLander)
+            StartCoroutine(LandSoon(Random.Range(1f, 3f)));
     }
 
     void Update()
     {
+        if (!bodyTarget) return;
+
         if (isLanded)
         {
             transform.position = bodyTarget.position;
@@ -82,7 +94,7 @@ public class Mosquito : MonoBehaviour
 
     void PickNewAction()
     {
-        if (Random.value < landChance)
+        if (Random.value < landChance && isLander)
         {
             SetLanded(true);
             transform.position = bodyTarget.position;
@@ -104,22 +116,29 @@ public class Mosquito : MonoBehaviour
         );
     }
 
-    public void Initialize(Transform target)
+    IEnumerator FlyAwayAfterTime(float time)
     {
-        // Still ignored, but kept for Spawner compatibility
-    }
-
-    IEnumerator FlyAwayAfterTime(float duration)
-    {
-        yield return new WaitForSeconds(duration);
+        yield return new WaitForSeconds(time);
         SetLanded(false);
-        targetOffset = Random.onUnitSphere * 5f;
+        targetOffset = Random.onUnitSphere * 3f;
         buzzSpeedMultiplier = 3f;
     }
 
-    public void SetLanded(bool landed)
+    IEnumerator LandSoon(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        PickNewAction();
+    }
+
+    void SetLanded(bool landed)
     {
         isLanded = landed;
         buzzSpeedMultiplier = landed ? 0f : 1f;
+
+        // Make them visibly smaller when landed
+        transform.localScale = landed ? Vector3.one * 0.12f : Vector3.one * 0.18f;
     }
+
+    // --- Added so slapper can check landing state ---
+    public bool IsLanded() => isLanded;
 }
