@@ -63,15 +63,16 @@ public class PlayerIKSlapper : MonoBehaviour
         audioSrc.PlayOneShot(slapSound);
 
         // Raycast for mosquitoes or body parts hit
-        if (Physics.Raycast(ray, out RaycastHit hit, 3f, hitMask))
+       if (Physics.Raycast(ray, out RaycastHit hit, 3f, hitMask))
         {
-            if (hit.collider.CompareTag("Mosquito"))
+            if (hit.collider.CompareTag("pseudo"))
             {
-                Destroy(hit.collider.gameObject);
+              //  Destroy(hit.collider.gameObject);
                 score += 10;
                 UpdateScoreUI();
             }
         }
+    
 
         // Return hand
         t = 0;
@@ -94,6 +95,12 @@ public class PlayerIKSlapper : MonoBehaviour
         // These apply the position and rotation from your Update()
         anim.SetIKPosition(AvatarIKGoal.RightHand, rightHandTarget.position);
         anim.SetIKRotation(AvatarIKGoal.RightHand, rightHandTarget.rotation);
+    }
+    // Add this public method
+    public void AddScore(int points)
+    {
+        score += points;
+        UpdateScoreUI();
     }
     void UpdateScoreUI() => scoreText.text = "Score: " + score;
 }

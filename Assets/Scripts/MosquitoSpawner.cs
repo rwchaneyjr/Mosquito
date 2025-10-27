@@ -1,54 +1,126 @@
 ﻿using UnityEngine;
+using System.Reflection;
 
 public class MosquitoSpawner : MonoBehaviour
 {
     [Header("Mosquito")]
     public GameObject mosquitoPrefab;
 
-    [Header("Spawn Origin (Set to Main Camera)")]
-    public Transform spawnOrigin;    // <-- NEW FIELD for camera position
+    [Header("Spawn Origin (Camera or spawn point)")]
+    public Transform spawnOrigin;
 
-    [Header("Movement Target (Set to Player/Mos)")]
-    public Transform playerTarget;   // <-- NEW FIELD for player root
+    [Header("Movement Target (Player Root)")]
+    public Transform playerTarget;
 
     [Header("Spawn Settings")]
-    public float spawnInterval = 2f;
-    public float spawnRadius = 4f;  // Set this for distance from camera
+    public float spawnInterval = 3f;
+    public float spawnRadius = 4f;
+    public int maxMosquitoes = 5;
+
+    private int currentMosquitoCount = 0;
 
     void Start()
     {
-        if (!mosquitoPrefab || !spawnOrigin || !playerTarget)
+        if (!mosquitoPrefab)
         {
-            Debug.LogError("MosquitoSpawner: Prefab, Spawn Origin, or Player Target is not assigned!");
+            Debug.LogError("❌ MosquitoSpawner: Mosquito Prefab not assigned!");
             enabled = false;
             return;
         }
+
+        if (!spawnOrigin)
+        {
+            Debug.LogError("❌ MosquitoSpawner: Spawn Origin not assigned!");
+            enabled = false;
+            return;
+        }
+
+        if (!playerTarget)
+        {
+            Debug.LogError("❌ MosquitoSpawner: Player Target not assigned!");
+            enabled = false;
+            return;
+        }
+
+        Debug.Log($"✓ MosquitoSpawner ready. Will spawn around {spawnOrigin.name}, targeting {playerTarget.name}");
+
         InvokeRepeating(nameof(SpawnMosquito), 1f, spawnInterval);
     }
 
-    // MosquitoSpawner.cs (The SpawnMosquito function)
-
     void SpawnMosquito()
     {
-        // PURE POSITIONING: Spawns in a random sphere around the origin point.
-        // The visual direction (from camera to player) is controlled entirely
-        // by where you place the Spawn Origin object relative to the player.
-        Vector3 randomOffset = Random.onUnitSphere * spawnRadius;
+        if (currentMosquitoCount >= maxMosquitoes)
+        {
+            Debug.Log($"⚠️ Max mosquitoes reached ({maxMosquitoes})");
+            return;
+        }
 
-        // Use the assigned spawnOrigin position (your Cube or the Camera) as the center
+        // Spawn in random position around spawn origin
+        Vector3 randomOffset = Random.onUnitSphere * spawnRadius;
         Vector3 spawnPosition = spawnOrigin.position + randomOffset;
 
         GameObject go = Instantiate(mosquitoPrefab, spawnPosition, Quaternion.identity);
+        currentMosquitoCount++;
 
-        // Hand off the actual PLAYER reference to the Mosquito script
-        var m = go.GetComponent<Mosquito>();
-        if (m != null)
+        Debug.Log($"🦟 Spawned mosquito #{currentMosquitoCount} at {spawnPosition}");
+
+        // Try to assign the player target - works with any mosquito script
+        Component mosquito = go.GetComponent("MosquitoLanding");
+
+        if (mosquito == null)
         {
-            m.characterRoot = playerTarget;
+            mosquito = go.GetComponent("Mosquito");
         }
 
-        // Debug line to visually confirm spawn location
+        if (mosquito != null)
+        {
+            // Try multiple possible field names
+            bool success = TrySetField(mosquito, "characterRoot", playerTarget) ||
+                          TrySetField(mosquito, "playerTarget", playerTarget) ||
+                          TrySetField(mosquito, "target", playerTarget);
+
+            if (success)
+            {
+                Debug.Log($"✓ Assigned target to mosquito: {playerTarget.name}");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ Could not assign target - check mosquito script has public Transform characterRoot");
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ Spawned prefab has no Mosquito script!");
+            Destroy(go);
+            currentMosquitoCount--;
+            return;
+        }
+
+        // Track when mosquito is destroyed
+        StartCoroutine(TrackMosquito(go));
+
+        // Debug line
         Debug.DrawLine(spawnOrigin.position, spawnPosition, Color.yellow, 2f);
-        Debug.Log($"Spawned mosquito @ {spawnPosition}");
+    }
+
+    bool TrySetField(Component component, string fieldName, object value)
+    {
+        System.Type type = component.GetType();
+        FieldInfo field = type.GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
+
+        if (field != null)
+        {
+            field.SetValue(component, value);
+            Debug.Log($"✓ Set field '{fieldName}' via reflection");
+            return true;
+        }
+        return false;
+    }
+
+    System.Collections.IEnumerator TrackMosquito(GameObject mosquito)
+    {
+        yield return new WaitUntil(() => mosquito == null);
+        currentMosquitoCount--;
+        Debug.Log($"🦟 Mosquito destroyed. Count: {currentMosquitoCount}");
     }
 }

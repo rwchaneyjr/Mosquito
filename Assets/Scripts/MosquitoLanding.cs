@@ -1,125 +1,311 @@
-using UnityEngine;
+﻿using UnityEngine;
+using System.Collections;
 
 public class MosquitoLanding : MonoBehaviour
 {
-    // === DRAG IN YOUR MOSQUITO GAMEOBJECT HERE ===
-    public Transform mosquitoTransform;
-
-    // === Target to land on (Assign in Inspector) ===
-    public Transform landingTarget;
+    [Header("Target Character Setup")]
+    public Transform characterRoot;
 
     [Header("Movement Settings")]
-    public float flySpeed = 5f;
-    public float landingSpeed = 1.5f;
-    public float rotationSpeed = 10f;
-    public float landingDistance = 1.0f; // Distance to start landing sequence
-    public float attachDistance = 0.1f; // Distance to stop and attach
+    public float buzzRadius = 0.8f;
+    public float speed = 2f;
+    public float initialApproachSpeed = 4f;
 
-    private enum MosquitoState { Flying, Landing, Landed }
-    private MosquitoState currentState = MosquitoState.Flying;
+    [Header("Landing Settings")]
+    public float landDuration = 3f;
+    public float landCheckRadius = 0.5f;
 
-    private float landTime = 3f; // How long to stay landed
-    private float currentLandTimer;
+    // Internal state
+    private bool isLanded = false;
+    private bool hasReachedBuzzZone = false;
+    private Transform bodyTarget;
+    private Vector3 targetOffset;
+    private float currentSpeed;
+    private Vector3 landedPosition;
 
-    // --- Start ---
+    // Standard Humanoid bone names
+    private readonly HumanBodyBones[] humanoidBones = new HumanBodyBones[]
+ {
+        HumanBodyBones.Head,
+        HumanBodyBones.Neck,
+        HumanBodyBones.Chest,
+        HumanBodyBones.UpperChest,
+        HumanBodyBones.Spine,
+        HumanBodyBones.LeftUpperArm,
+        HumanBodyBones.RightUpperArm,
+        HumanBodyBones.LeftLowerArm,
+        HumanBodyBones.RightLowerArm,
+        HumanBodyBones.LeftUpperLeg,
+        HumanBodyBones.RightUpperLeg,
+        HumanBodyBones.LeftLowerLeg,
+        HumanBodyBones.RightLowerLeg
+ };
+
+    // Mixamo bone names - Face, throat, chest, arms, legs
+    private readonly string[] mixamoBones = new string[]
+    {
+        "mixamorig:Head",          // Face/head area
+        "mixamorig:HeadTop_End",   // Top of head
+        "mixamorig:Neck",          // Throat/neck
+        "mixamorig:Spine2",        // Upper chest
+        "mixamorig:Spine1",        // Mid chest
+        "mixamorig:Spine",         // Lower chest
+        "mixamorig:LeftArm",
+        "mixamorig:RightArm",
+        "mixamorig:LeftForeArm",
+        "mixamorig:RightForeArm",
+        "mixamorig:LeftUpLeg",
+        "mixamorig:RightUpLeg",
+        "mixamorig:LeftLeg",
+        "mixamorig:RightLeg"
+    };
+
     void Start()
     {
-        if (mosquitoTransform == null)
+        Debug.Log("🦟 MOSQUITO SPAWNED");
+
+        if (characterRoot == null)
         {
-            Debug.LogError("Mosquito Transform is not assigned! Please drag the character in the Inspector.");
-            // Disable the script if the required transform is missing.
-            enabled = false;
+            Debug.LogError("❌ characterRoot is NULL!");
+            Destroy(gameObject);
+            return;
         }
-        else if (landingTarget == null)
+
+        // Try Humanoid first (preferred method)
+        Animator anim = characterRoot.GetComponent<Animator>();
+        if (anim != null && anim.isHuman && anim.avatar != null && anim.avatar.isValid)
         {
-            Debug.LogWarning("Landing Target is not assigned. Mosquito will not move.");
-            // Optional: Find a default target or set a random point.
+            Debug.Log("✓ Using Humanoid Avatar");
+            bodyTarget = GetRandomHumanoidBone(anim);
         }
+
+        // Fallback: Search for Mixamo bones by name
+        if (bodyTarget == null)
+        {
+            Debug.Log("⚠️ No Humanoid Avatar, searching for Mixamo bones...");
+            bodyTarget = GetRandomMixamoBone(characterRoot);
+        }
+
+        // Last resort: Use character center
+        if (bodyTarget == null)
+        {
+            Debug.LogWarning("⚠️ No bones found! Using character root position");
+            // Create a dummy target at character's center
+            GameObject dummyTarget = new GameObject("DummyTarget");
+            dummyTarget.transform.SetParent(characterRoot);
+            dummyTarget.transform.localPosition = Vector3.up * 1.5f; // Approximate head height
+            bodyTarget = dummyTarget.transform;
+        }
+
+        Debug.Log($"✓ Targeting: {bodyTarget.name} at {bodyTarget.position}");
+
+        // Setup collider
+        SphereCollider col = GetComponent<SphereCollider>();
+        if (col == null)
+        {
+            col = gameObject.AddComponent<SphereCollider>();
+        }
+        col.isTrigger = true;
+        col.radius = 0.5f;
+
+        // Ensure tag
+        if (!gameObject.CompareTag("Mosquito"))
+        {
+            gameObject.tag = "Mosquito";
+        }
+
+        // Initial state
+        currentSpeed = initialApproachSpeed;
+        transform.localScale = Vector3.one * 0.3f;
+        PickNewOffset();
+
+        Debug.Log("=== MOSQUITO READY ===");
     }
 
-    // --- Update Loop ---
+    Transform GetRandomHumanoidBone(Animator anim)
+    {
+        HumanBodyBones randomBone = humanoidBones[Random.Range(0, humanoidBones.Length)];
+        Transform bone = anim.GetBoneTransform(randomBone);
+
+        if (bone != null)
+        {
+            Debug.Log($"✓ Found Humanoid bone: {randomBone}");
+            return bone;
+        }
+
+        // Try other bones if first fails
+        foreach (var boneType in humanoidBones)
+        {
+            bone = anim.GetBoneTransform(boneType);
+            if (bone != null)
+            {
+                Debug.Log($"✓ Found Humanoid bone: {boneType}");
+                return bone;
+            }
+        }
+
+        return null;
+    }
+
+    Transform GetRandomMixamoBone(Transform root)
+    {
+        string randomBoneName = mixamoBones[Random.Range(0, mixamoBones.Length)];
+        Transform bone = FindDeepChild(root, randomBoneName);
+
+        if (bone != null)
+        {
+            Debug.Log($"✓ Found Mixamo bone: {randomBoneName}");
+            return bone;
+        }
+
+        // Try all bones
+        foreach (string boneName in mixamoBones)
+        {
+            bone = FindDeepChild(root, boneName);
+            if (bone != null)
+            {
+                Debug.Log($"✓ Found Mixamo bone: {boneName}");
+                return bone;
+            }
+        }
+
+        return null;
+    }
+
+    // Recursively search for a child by name
+    Transform FindDeepChild(Transform parent, string childName)
+    {
+        foreach (Transform child in parent)
+        {
+            if (child.name == childName)
+                return child;
+
+            Transform result = FindDeepChild(child, childName);
+            if (result != null)
+                return result;
+        }
+        return null;
+    }
+
     void Update()
     {
-        if (mosquitoTransform == null || landingTarget == null) return;
-
-        switch (currentState)
+        if (!bodyTarget || isLanded)
         {
-            case MosquitoState.Flying:
-                FlyToTarget();
-                break;
-            case MosquitoState.Landing:
-                ExecuteLanding();
-                break;
-            case MosquitoState.Landed:
-                MaintainLandedState();
-                break;
-        }
-    }
-
-    // --- Core Movement Function ---
-    void FlyToTarget()
-    {
-        // 1. Calculate the Direction
-        // The 'direction' vector points from the mosquito to the target.
-        Vector3 direction = landingTarget.position - mosquitoTransform.position;
-        float distance = direction.magnitude;
-
-        // 2. Check for State Change
-        if (distance <= landingDistance)
-        {
-            currentState = MosquitoState.Landing;
+            if (isLanded)
+            {
+                transform.position = landedPosition;
+            }
             return;
         }
 
-        // 3. Normalize the direction (make it a unit vector)
-        Vector3 normalizedDirection = direction.normalized;
+        Vector3 targetPosition = bodyTarget.position + targetOffset;
+        float distanceToBone = Vector3.Distance(transform.position, bodyTarget.position);
 
-        // 4. Apply movement using Transform.Translate
-        // DeltaTime ensures frame rate independence.
-        mosquitoTransform.Translate(normalizedDirection * flySpeed * Time.deltaTime, Space.World);
+        // Move towards target
+        transform.position = Vector3.MoveTowards(
+            transform.position,
+            targetPosition,
+            currentSpeed * Time.deltaTime
+        );
 
-        // 5. Rotate to face the direction of travel (for visual realism)
-        Quaternion lookRotation = Quaternion.LookRotation(normalizedDirection);
-        mosquitoTransform.rotation = Quaternion.Slerp(mosquitoTransform.rotation, lookRotation, rotationSpeed * Time.deltaTime);
-    }
-
-    // --- Landing Sequence Function ---
-    void ExecuteLanding()
-    {
-        Vector3 direction = landingTarget.position - mosquitoTransform.position;
-        float distance = direction.magnitude;
-
-        // 1. Check for Attachment
-        if (distance <= attachDistance)
+        // Rotate to face direction
+        Vector3 direction = (targetPosition - transform.position).normalized;
+        if (direction != Vector3.zero)
         {
-            currentState = MosquitoState.Landed;
-            mosquitoTransform.position = landingTarget.position; // Snap to the exact point
-            mosquitoTransform.SetParent(landingTarget); // OPTIONAL: Make it stick to the target
-            currentLandTimer = landTime;
-            return;
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                Quaternion.LookRotation(direction),
+                Time.deltaTime * 5f
+            );
         }
 
-        // 2. Slow Movement
-        Vector3 normalizedDirection = direction.normalized;
-        mosquitoTransform.Translate(normalizedDirection * landingSpeed * Time.deltaTime, Space.World);
+        // Check if reached buzz zone
+        if (!hasReachedBuzzZone && distanceToBone < buzzRadius * 2f)
+        {
+            hasReachedBuzzZone = true;
+            currentSpeed = speed;
+            Debug.Log("✓ Entered buzz zone");
+        }
 
-        // 3. Rotation remains the same as Flying for a smooth transition
-        Quaternion lookRotation = Quaternion.LookRotation(normalizedDirection);
-        mosquitoTransform.rotation = Quaternion.Slerp(mosquitoTransform.rotation, lookRotation, rotationSpeed * Time.deltaTime);
+        // Check if close enough to land
+        if (hasReachedBuzzZone && distanceToBone < landCheckRadius && !isLanded)
+        {
+            float landChance = 0.3f;
+            if (Random.value < landChance * Time.deltaTime)
+            {
+                LandOnTarget();
+            }
+        }
+
+        // Pick new buzz position
+        float distanceToTarget = Vector3.Distance(transform.position, targetPosition);
+        if (hasReachedBuzzZone && distanceToTarget < 0.1f)
+        {
+            PickNewOffset();
+        }
     }
 
-    // --- Landed State Function ---
-    void MaintainLandedState()
+    void LandOnTarget()
     {
-        // For Landed state, the mosquito is locked in place.
-        currentLandTimer -= Time.deltaTime;
+        if (isLanded) return;
 
-        if (currentLandTimer <= 0)
+        Debug.Log($"🦟 LANDING ON: {bodyTarget.name}");
+
+        isLanded = true;
+        landedPosition = bodyTarget.position;
+        transform.position = landedPosition;
+
+        // Make bigger when landed
+        transform.localScale = Vector3.one * 25.0f;  // Much bigger!
+        StartCoroutine(FlyAwayAfterTime(landDuration));
+    }
+
+    void PickNewOffset()
+    {
+        targetOffset = new Vector3(
+            Random.Range(-buzzRadius, buzzRadius),
+            Random.Range(-buzzRadius, buzzRadius),
+            Random.Range(-buzzRadius, buzzRadius)
+        );
+    }
+
+    IEnumerator FlyAwayAfterTime(float time)
+    {
+        Debug.Log($"⏱️ Mosquito will fly away in {time}s");
+        yield return new WaitForSeconds(time);
+
+        if (!isLanded) yield break;
+
+        Debug.Log("🦟 Flying away!");
+        isLanded = false;
+        hasReachedBuzzZone = false;
+
+        targetOffset = Random.onUnitSphere * 5f;
+        currentSpeed = initialApproachSpeed * 2f;
+        transform.localScale = Vector3.one * 0.3f;
+
+        yield return new WaitForSeconds(3f);
+
+        Debug.Log("💀 Destroying escaped mosquito");
+        Destroy(gameObject);
+    }
+
+    public bool IsLanded() => isLanded;
+
+    void OnDestroy()
+    {
+        Debug.Log($"💀 Mosquito destroyed. Was landed: {isLanded}");
+    }
+
+    void OnDrawGizmos()
+    {
+        if (bodyTarget != null)
         {
-            // Flee or return to Flying state after timer expires
-            Debug.Log("Mosquito has finished landing and will now fly away.");
-            mosquitoTransform.SetParent(null); // Unparent from the target
-            currentState = MosquitoState.Flying; // Or change to a Fleeing state
+            Gizmos.color = isLanded ? Color.red : Color.yellow;
+            Gizmos.DrawWireSphere(bodyTarget.position, buzzRadius);
+
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(bodyTarget.position, landCheckRadius);
         }
     }
 }

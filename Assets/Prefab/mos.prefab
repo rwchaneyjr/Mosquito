@@ -88,15 +88,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
       propertyPath: m_LocalScale.x
-      value: 16
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
       propertyPath: m_LocalScale.y
-      value: 15
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
       propertyPath: m_LocalScale.z
-      value: 15
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
       propertyPath: m_LocalPosition.x
@@ -168,7 +168,7 @@ PrefabInstance:
       addedObject: {fileID: 8734561930143420530}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5149858679234768673}
+      addedObject: {fileID: 7586761141718184471}
   m_SourcePrefab: {fileID: 100100000, guid: 604194774aba20e4a9c99837787bacc3, type: 3}
 --- !u!4 &3830360978023603673 stripped
 Transform:
@@ -215,13 +215,13 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.01084595, y: 0.0092007695, z: 0.018991949}
   m_Center: {x: -0.00000030500814, y: 0.00006127497, z: -0.000019514933}
---- !u!114 &5149858679234768673
+--- !u!114 &7586761141718184471
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -230,15 +230,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 4495715782888327011}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 13bb4259222dc3d40af8cbf5453b7263, type: 3}
+  m_Script: {fileID: 11500000, guid: a9c5ce2153e828446ab1455961488152, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   characterRoot: {fileID: 0}
-  isLander: 1
-  buzzRadius: 2
-  speed: 1
-  landDuration: 0.9
-  landChance: 0.9
+  buzzRadius: 0.8
+  speed: 2
+  initialApproachSpeed: 4
+  landDuration: 3
+  landCheckRadius: 0.5
 --- !u!1001 &7774008317753202052
 PrefabInstance:
   m_ObjectHideFlags: 0
