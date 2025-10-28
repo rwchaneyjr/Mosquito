@@ -1,73 +1,69 @@
 ﻿using UnityEngine;
 
+// Empty marker: if this component exists, the mosquito was already scored.
+public class AlreadyHit : MonoBehaviour { }
+
 [DisallowMultipleComponent]
 public class HandSlapper : MonoBehaviour
 {
-    [Header("Score + Sound")]
-    public PlayerIKSlapper playerSlapper; // Drag your player (with PlayerIKSlapper) here
+    public PlayerIKSlapper playerSlapper;   // drag your PlayerIKSlapper object here
     public AudioClip slapSound;
+    public float triggerRadius = 0.3f;
 
-    [Header("Collider Settings")]
-    [Tooltip("Trigger radius for the hand hit area.")]
-    public float triggerRadius = 0.35f;
-
-    [HideInInspector] public bool isSlapping = false;
-
+    [HideInInspector] public bool isSlapping = false; // set true only while slapping
     private AudioSource audioSrc;
+
+    // NEW: cap scoring to once per slap
+    private bool scoredThisSwing = false;
+    private bool wasSlappingLastFrame = false;
 
     void Start()
     {
-        // Ensure a trigger collider exists
+        // Ensure trigger collider
         var col = GetComponent<SphereCollider>() ?? gameObject.AddComponent<SphereCollider>();
         col.isTrigger = true;
         col.radius = triggerRadius;
 
-        // IMPORTANT: moving trigger needs a kinematic Rigidbody for trigger callbacks
+        // Ensure kinematic rigidbody (required for trigger events)
         var rb = GetComponent<Rigidbody>() ?? gameObject.AddComponent<Rigidbody>();
         rb.isKinematic = true;
+        rb.useGravity = false;
 
-        audioSrc = gameObject.AddComponent<AudioSource>();
+        // Ensure audio
+        audioSrc = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
+    }
 
-        Debug.Log($"✅ HandSlapper ready: trigger r={col.radius}, hasRB={rb != null}, kinematic={rb.isKinematic}");
+    void Update()
+    {
+        // Rising edge of a slap → allow scoring again
+        if (isSlapping && !wasSlappingLastFrame)
+            scoredThisSwing = false;
+
+        wasSlappingLastFrame = isSlapping;
     }
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"🟢 Hand collider triggered with {other.name} | tag={other.tag} | isSlapping={isSlapping}");
+        if (!isSlapping) return;                 // only during slap
+        if (scoredThisSwing) return;             // cap: one score per swing
+        if (!other.CompareTag("Mosquito")) return;
 
-        if (!isSlapping)
-        {
-            Debug.Log("🟡 Ignored — not currently slapping");
-            return;
-        }
+        // Use root so child colliders don't double-count
+        Transform root = other.attachedRigidbody ? other.attachedRigidbody.transform : other.transform.root;
 
-        if (other.CompareTag("Mosquito"))
-        {
-            Debug.Log($"💥 SWAT DETECTED! playerSlapper={(playerSlapper != null ? "✅ assigned" : "❌ null")}");
+        // If this mosquito was already scored before, ignore
+        if (root.GetComponent<AlreadyHit>()) return;
 
-            if (slapSound && audioSrc)
-            {
-                Debug.Log("🔊 Playing slap sound...");
-                audioSrc.PlayOneShot(slapSound);
-            }
+        // First time → mark it
+        root.gameObject.AddComponent<AlreadyHit>();
 
-            if (playerSlapper != null)
-            {
-                Debug.Log("🧮 Adding 10 points to score...");
-                playerSlapper.AddScore(10);
-            }
-            else
-            {
-                Debug.LogWarning("⚠️ HandSlapper.playerSlapper is NULL! Score cannot increase.");
-            }
+        // Score once and lock for this swing
+        if (playerSlapper != null) playerSlapper.AddScore(10);
+        scoredThisSwing = true;
 
-            Debug.Log("💀 Destroying mosquito...");
-            Destroy(other.gameObject);
-        }
-        else
-        {
-            Debug.Log($"🟣 Collided with non-mosquito object: {other.name}");
-        }
+        if (slapSound && audioSrc) audioSrc.PlayOneShot(slapSound);
+
+        // Remove the mosquito
+        Destroy(root.gameObject, 0.05f);
     }
-
 }

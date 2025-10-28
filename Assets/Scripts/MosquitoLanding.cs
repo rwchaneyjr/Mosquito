@@ -112,7 +112,7 @@ public class MosquitoLanding : MonoBehaviour
 
         // Initial state
         currentSpeed = initialApproachSpeed;
-        transform.localScale = Vector3.one * 0.3f;
+        transform.localScale = Vector3.one * 0.05f;
         PickNewOffset();
 
         Debug.Log("=== MOSQUITO READY ===");
@@ -332,7 +332,7 @@ public class MosquitoLanding : MonoBehaviour
         transform.position = landedPosition;
 
         // Keep whatever scale behavior you already use
-        transform.localScale = Vector3.one * 25.0f;
+        transform.localScale = Vector3.one * 15.0f;
 
         StartCoroutine(FlyAwayAfterTime(landDuration));
     }
@@ -360,7 +360,7 @@ public class MosquitoLanding : MonoBehaviour
 
         targetOffset = Random.onUnitSphere * 5f;
         currentSpeed = initialApproachSpeed * 2f;
-        transform.localScale = Vector3.one * 0.3f;
+        transform.localScale = Vector3.one * 0.15f;
 
         yield return new WaitForSeconds(3f);
 
