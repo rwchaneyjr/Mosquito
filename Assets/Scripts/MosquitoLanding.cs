@@ -22,20 +22,23 @@ public class MosquitoLanding : MonoBehaviour
     private Vector3 targetOffset;
     private float currentSpeed;
     private Vector3 landedPosition;
+    Vector3 LeftShoulderOffset = new Vector3(0f, 0f, -.25f);
     // Define the set of areas we might land on
     private enum LandingArea
     {
         HeadTop,
+        NeckFront,
         ChestFront,
         LeftShoulderFront,
-        RightShoulderFront,
+       
         LeftArmTop,
-        RightArmTop
+       
     }
 
     // Standard Humanoid bone names
     private readonly HumanBodyBones[] humanoidBones = new HumanBodyBones[] {
         HumanBodyBones.Head,
+          HumanBodyBones.Neck,
         HumanBodyBones.Chest,
         HumanBodyBones.UpperChest,
         HumanBodyBones.Spine,
@@ -46,6 +49,7 @@ public class MosquitoLanding : MonoBehaviour
     // Mixamo bone names - Face, throat, chest, arms, legs
     private readonly string[] mixamoBones = new string[] {
         "mixamorig:Head",
+         "mixamorig:Neck",
         "mixamorig:Spine2",
         "mixamorig:Spine1",
         "mixamorig:Spine",
@@ -254,11 +258,12 @@ public class MosquitoLanding : MonoBehaviour
         LandingArea[] candidates = new LandingArea[]
         {
         LandingArea.HeadTop,
+        LandingArea.NeckFront,
         LandingArea.ChestFront,
         LandingArea.LeftShoulderFront,
-        LandingArea.RightShoulderFront,
-        LandingArea.LeftArmTop,
-        LandingArea.RightArmTop
+        
+        LandingArea.LeftArmTop
+     
         };
         var area = candidates[Random.Range(0, candidates.Length)];
 
@@ -268,25 +273,29 @@ public class MosquitoLanding : MonoBehaviour
         {
             case LandingArea.HeadTop:
                 chosenBone = anim.GetBoneTransform(HumanBodyBones.Head);
-                localOffset = new Vector3(0f, upOffset, 0f); // top of head
+                localOffset = new Vector3(0f, .24f, .25f); // top of head
+                break;
+            case LandingArea.NeckFront:
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.Neck);
+                localOffset = new Vector3(0f,.1f, .25f); // top of head
                 break;
 
             case LandingArea.ChestFront:
                 chosenBone = anim.GetBoneTransform(HumanBodyBones.Chest)
                            ?? anim.GetBoneTransform(HumanBodyBones.UpperChest)
                            ?? anim.GetBoneTransform(HumanBodyBones.Spine);
-                localOffset = new Vector3(0f, 0f, fwdOffset); // front of chest
+                localOffset = new Vector3(0f,.20f, .25f); // front of chest
                 break;
+
+         
 
             case LandingArea.LeftShoulderFront:
-                chosenBone = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm);
-                localOffset = new Vector3(0f, 0f, fwdOffset); // shoulder front
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.LeftShoulder);
+                localOffset = new Vector3(0f, 0f, -.25f);
                 break;
 
-            case LandingArea.RightShoulderFront:
-                chosenBone = anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
-                localOffset = new Vector3(0f, 0f, fwdOffset); // shoulder front
-                break;
+          
+
 
             case LandingArea.LeftArmTop:
                 chosenBone = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm)
@@ -294,11 +303,7 @@ public class MosquitoLanding : MonoBehaviour
                 localOffset = new Vector3(0f, upOffset, 0f); // top of arm
                 break;
 
-            case LandingArea.RightArmTop:
-                chosenBone = anim.GetBoneTransform(HumanBodyBones.RightLowerArm)
-                           ?? anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
-                localOffset = new Vector3(0f, upOffset, 0f); // top of arm
-                break;
+         
         }
 
         // If we couldn't find that bone, fall back to any valid bone you already picked
@@ -319,7 +324,7 @@ public class MosquitoLanding : MonoBehaviour
 
         // You set these two numbers:
         float up = 0.20f;      // meters upward for "top" landings
-        float fwd = 0.25f;     // meters forward for "front" landings
+        float fwd = .25f;     // meters forward for "front" landings
 
         Animator anim = characterRoot.GetComponent<Animator>();
         landedPosition = GetRandomLandingPosition(anim, out bodyTarget, up, fwd);
