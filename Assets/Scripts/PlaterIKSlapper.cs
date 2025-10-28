@@ -7,52 +7,107 @@ public class PlayerIKSlapper : MonoBehaviour
     [Header("Camera & IK Target")]
     public Camera cam;
     public Transform rightHandTarget;
-    public float handDistance = 2.0f;
+    [Tooltip("How far from the camera the hand target sits while aiming with the mouse.")]
+    public float handDistance = 0.9f;
 
     [Header("Slap Settings")]
-    public float slapReach = 0.35f;
+    public float slapReach = 0.6f;
     public float slapSpeed = 10f;
     public AudioClip slapSound;
-    public LayerMask hitMask;
     public TMP_Text scoreText;
+
+    [Header("References")]
+    [Tooltip("Drag the HandSlapper (on your hand object) here.")]
+    public HandSlapper handSlapper;
 
     private Animator anim;
     private AudioSource audioSrc;
     private int score;
     private bool isSlapping;
 
+    private Transform chestBone;
+
     void Start()
     {
         anim = GetComponent<Animator>();
         audioSrc = gameObject.AddComponent<AudioSource>();
         if (!cam) cam = Camera.main;
+
+        // ✅ Find chest or spine bone for consistent slap direction
+        chestBone = anim.GetBoneTransform(HumanBodyBones.Chest);
+        if (!chestBone)
+            chestBone = anim.GetBoneTransform(HumanBodyBones.Spine);
+
+        // Auto-create a hand target if not set
         if (!rightHandTarget)
         {
             rightHandTarget = new GameObject("RightHandTarget").transform;
-            rightHandTarget.position = transform.position + transform.forward * 1.5f;
+            var centerRay = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            rightHandTarget.position = centerRay.GetPoint(handDistance);
         }
+
+        // Make target face same direction as chest
+        if (chestBone)
+            rightHandTarget.rotation = chestBone.rotation;
+        else
+            rightHandTarget.rotation = transform.rotation;
+
+        // Auto-link HandSlapper if not assigned
+        if (!handSlapper)
+        {
+            handSlapper = FindObjectOfType<HandSlapper>();
+            if (handSlapper)
+                Debug.Log($"🔗 Auto-linked HandSlapper: {handSlapper.name}");
+            else
+                Debug.LogWarning("⚠️ HandSlapper not found! Drag it manually in Inspector.");
+        }
+
         UpdateScoreUI();
     }
 
     void Update()
     {
-        // Move IK target to mouse point in front of camera
+        // Move the target with mouse pointer
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
         rightHandTarget.position = ray.GetPoint(handDistance);
-        rightHandTarget.rotation = transform.rotation;
 
+        // Rotate to match body orientation
+        if (chestBone)
+            rightHandTarget.rotation = chestBone.rotation;
+        else
+            rightHandTarget.rotation = transform.rotation;
+
+        // Start slap on click
         if (Input.GetMouseButtonDown(0) && !isSlapping)
-            StartCoroutine(SlapMotion(ray));
+        {
+            StartCoroutine(SlapMotion());
+        }
+
+        // Optional debug line to see slap direction in Scene view
+        if (chestBone)
+        {
+            Vector3 worldDir = chestBone.TransformDirection(new Vector3(0f, 0f, -1f)); // away from chest
+            Debug.DrawRay(rightHandTarget.position, worldDir * slapReach, Color.cyan);
+        }
     }
 
-    System.Collections.IEnumerator SlapMotion(Ray ray)
+    System.Collections.IEnumerator SlapMotion()
     {
         isSlapping = true;
-        Vector3 start = rightHandTarget.position;
-        Vector3 forward = ray.direction * slapReach;
-        Vector3 end = start + forward;
+        if (handSlapper) handSlapper.isSlapping = true;
 
-        float t = 0;
+        Vector3 start = rightHandTarget.position;
+
+        // ✅ Always slap AWAY from the chest, regardless of rotation
+        Vector3 localDir = new Vector3(0f, 0f, -1f); // negative Z = away from body
+        Transform refBone = (chestBone ? chestBone : transform);
+        Vector3 worldDir = refBone.TransformDirection(localDir).normalized;
+        Vector3 end = start + worldDir * slapReach;
+
+        Debug.Log($"🖐 Slapping direction: {worldDir}");
+        Debug.DrawRay(start, worldDir * slapReach, Color.green, 1f);
+
+        float t = 0f;
         while (t < 1f)
         {
             t += Time.deltaTime * slapSpeed;
@@ -60,47 +115,51 @@ public class PlayerIKSlapper : MonoBehaviour
             yield return null;
         }
 
-        audioSrc.PlayOneShot(slapSound);
+        yield return new WaitForSeconds(0.15f); // small overlap window
 
-        // Raycast for mosquitoes or body parts hit
-       if (Physics.Raycast(ray, out RaycastHit hit, 3f, hitMask))
-        {
-            if (hit.collider.CompareTag("pseudo"))
-            {
-              //  Destroy(hit.collider.gameObject);
-                score += 10;
-                UpdateScoreUI();
-            }
-        }
-    
+        if (slapSound) audioSrc.PlayOneShot(slapSound);
 
-        // Return hand
-        t = 0;
+        // Return hand to original position
+        t = 0f;
         while (t < 1f)
         {
             t += Time.deltaTime * slapSpeed;
             rightHandTarget.position = Vector3.Lerp(end, start, t);
             yield return null;
         }
+
         isSlapping = false;
+        if (handSlapper) handSlapper.isSlapping = false;
     }
 
-    
     void OnAnimatorIK(int layerIndex)
     {
-        // These must be 1 to make the IK take full control of the hand
-        anim.SetIKPositionWeight(AvatarIKGoal.RightHand, 1);
-        anim.SetIKRotationWeight(AvatarIKGoal.RightHand, 1);
+        if (anim == null || rightHandTarget == null) return;
 
-        // These apply the position and rotation from your Update()
+        anim.SetIKPositionWeight(AvatarIKGoal.RightHand, 1f);
+        anim.SetIKRotationWeight(AvatarIKGoal.RightHand, 1f);
         anim.SetIKPosition(AvatarIKGoal.RightHand, rightHandTarget.position);
         anim.SetIKRotation(AvatarIKGoal.RightHand, rightHandTarget.rotation);
     }
-    // Add this public method
+
+    // --- Score System ---
     public void AddScore(int points)
     {
+        int before = score;
         score += points;
+        Debug.Log($"📈 AddScore called! Before={before}, After={score}, +{points}");
         UpdateScoreUI();
     }
-    void UpdateScoreUI() => scoreText.text = "Score: " + score;
+
+    private void UpdateScoreUI()
+    {
+        if (scoreText)
+        {
+            scoreText.text = "Score: " + score;
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ ScoreText is NULL! Drag a TMP text object into PlayerIKSlapper.");
+        }
+    }
 }

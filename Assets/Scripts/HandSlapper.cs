@@ -1,63 +1,73 @@
 ﻿using UnityEngine;
 
+[DisallowMultipleComponent]
 public class HandSlapper : MonoBehaviour
 {
-    public PlayerIKSlapper playerSlapper; // Reference to main player script for score
+    [Header("Score + Sound")]
+    public PlayerIKSlapper playerSlapper; // Drag your player (with PlayerIKSlapper) here
     public AudioClip slapSound;
+
+    [Header("Collider Settings")]
+    [Tooltip("Trigger radius for the hand hit area.")]
+    public float triggerRadius = 0.35f;
+
+    [HideInInspector] public bool isSlapping = false;
+
     private AudioSource audioSrc;
 
     void Start()
     {
-        // Make sure this sphere is a trigger
-        SphereCollider col = GetComponent<SphereCollider>();
-        if (col == null)
-        {
-            col = gameObject.AddComponent<SphereCollider>();
-        }
+        // Ensure a trigger collider exists
+        var col = GetComponent<SphereCollider>() ?? gameObject.AddComponent<SphereCollider>();
         col.isTrigger = true;
-        col.radius = 0.3f; // Adjust size of slap zone
-        
-        Debug.Log($"✓ HandSlapper collider: radius={col.radius}, isTrigger={col.isTrigger}");
+        col.radius = triggerRadius;
 
-        // Setup audio
+        // IMPORTANT: moving trigger needs a kinematic Rigidbody for trigger callbacks
+        var rb = GetComponent<Rigidbody>() ?? gameObject.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+
         audioSrc = gameObject.AddComponent<AudioSource>();
+
+        Debug.Log($"✅ HandSlapper ready: trigger r={col.radius}, hasRB={rb != null}, kinematic={rb.isKinematic}");
     }
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"👋 Hand hit something: {other.name} (Tag: {other.tag})");
+        Debug.Log($"🟢 Hand collider triggered with {other.name} | tag={other.tag} | isSlapping={isSlapping}");
+
+        if (!isSlapping)
+        {
+            Debug.Log("🟡 Ignored — not currently slapping");
+            return;
+        }
 
         if (other.CompareTag("Mosquito"))
         {
-            MosquitoLanding mosq = other.GetComponent<MosquitoLanding>();
+            Debug.Log($"💥 SWAT DETECTED! playerSlapper={(playerSlapper != null ? "✅ assigned" : "❌ null")}");
 
-            if (mosq != null && mosq.IsLanded())
+            if (slapSound && audioSrc)
             {
-                Debug.Log("💥 SWATTED LANDED MOSQUITO!");
-                
-                // Play sound
-                if (slapSound != null && audioSrc != null)
-                {
-                    audioSrc.PlayOneShot(slapSound);
-                }
-
-                // Add score
-                if (playerSlapper != null)
-                {
-                    playerSlapper.AddScore(10);
-                }
-
-                // Destroy mosquito
-                Destroy(other.gameObject);
+                Debug.Log("🔊 Playing slap sound...");
+                audioSrc.PlayOneShot(slapSound);
             }
-            else if (mosq != null && !mosq.IsLanded())
+
+            if (playerSlapper != null)
             {
-                Debug.Log("❌ Missed - mosquito is flying!");
+                Debug.Log("🧮 Adding 10 points to score...");
+                playerSlapper.AddScore(10);
             }
             else
             {
-                Debug.LogWarning("⚠️ Mosquito has no MosquitoLanding component!");
+                Debug.LogWarning("⚠️ HandSlapper.playerSlapper is NULL! Score cannot increase.");
             }
+
+            Debug.Log("💀 Destroying mosquito...");
+            Destroy(other.gameObject);
+        }
+        else
+        {
+            Debug.Log($"🟣 Collided with non-mosquito object: {other.name}");
         }
     }
+
 }
