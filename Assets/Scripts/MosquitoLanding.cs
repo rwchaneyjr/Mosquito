@@ -22,42 +22,35 @@ public class MosquitoLanding : MonoBehaviour
     private Vector3 targetOffset;
     private float currentSpeed;
     private Vector3 landedPosition;
+    // Define the set of areas we might land on
+    private enum LandingArea
+    {
+        HeadTop,
+        ChestFront,
+        LeftShoulderFront,
+        RightShoulderFront,
+        LeftArmTop,
+        RightArmTop
+    }
 
     // Standard Humanoid bone names
-    private readonly HumanBodyBones[] humanoidBones = new HumanBodyBones[]
- {
+    private readonly HumanBodyBones[] humanoidBones = new HumanBodyBones[] {
         HumanBodyBones.Head,
-        HumanBodyBones.Neck,
         HumanBodyBones.Chest,
         HumanBodyBones.UpperChest,
         HumanBodyBones.Spine,
         HumanBodyBones.LeftUpperArm,
-        HumanBodyBones.RightUpperArm,
-        HumanBodyBones.LeftLowerArm,
-        HumanBodyBones.RightLowerArm,
-        HumanBodyBones.LeftUpperLeg,
-        HumanBodyBones.RightUpperLeg,
-        HumanBodyBones.LeftLowerLeg,
-        HumanBodyBones.RightLowerLeg
- };
+        HumanBodyBones.LeftLowerArm
+    };
 
     // Mixamo bone names - Face, throat, chest, arms, legs
-    private readonly string[] mixamoBones = new string[]
-    {
-        "mixamorig:Head",          // Face/head area
-        "mixamorig:HeadTop_End",   // Top of head
-        "mixamorig:Neck",          // Throat/neck
-        "mixamorig:Spine2",        // Upper chest
-        "mixamorig:Spine1",        // Mid chest
-        "mixamorig:Spine",         // Lower chest
+    private readonly string[] mixamoBones = new string[] {
+        "mixamorig:Head",
+        "mixamorig:Spine2",
+        "mixamorig:Spine1",
+        "mixamorig:Spine",
         "mixamorig:LeftArm",
-        "mixamorig:RightArm",
-        "mixamorig:LeftForeArm",
-        "mixamorig:RightForeArm",
-        "mixamorig:LeftUpLeg",
-        "mixamorig:RightUpLeg",
-        "mixamorig:LeftLeg",
-        "mixamorig:RightLeg"
+        "mixamorig:LeftForeArm"
     };
 
     void Start()
@@ -90,7 +83,6 @@ public class MosquitoLanding : MonoBehaviour
         if (bodyTarget == null)
         {
             Debug.LogWarning("⚠️ No bones found! Using character root position");
-            // Create a dummy target at character's center
             GameObject dummyTarget = new GameObject("DummyTarget");
             dummyTarget.transform.SetParent(characterRoot);
             dummyTarget.transform.localPosition = Vector3.up * 1.5f; // Approximate head height
@@ -244,21 +236,102 @@ public class MosquitoLanding : MonoBehaviour
             PickNewOffset();
         }
     }
+  
+    // Randomly pick a bone and compute a world landing position from a local offset.
+    // upOffset = how high above the bone to land (local +Y)
+    // fwdOffset = how far in front of the bone to land (local +Z)
+    private Vector3 GetRandomLandingPosition(Animator anim, out Transform chosenBone, float upOffset = 0.20f, float fwdOffset = 0.25f)
+    {
+        chosenBone = null;
+        if (anim == null || !anim.isHuman || anim.avatar == null || !anim.avatar.isValid)
+        {
+            // Fallback to current bodyTarget if any
+            chosenBone = bodyTarget != null ? bodyTarget : characterRoot;
+            return chosenBone != null ? chosenBone.position : transform.position;
+        }
+
+        // Randomly choose an area; you can bias by adding duplicates to the list if desired.
+        LandingArea[] candidates = new LandingArea[]
+        {
+        LandingArea.HeadTop,
+        LandingArea.ChestFront,
+        LandingArea.LeftShoulderFront,
+        LandingArea.RightShoulderFront,
+        LandingArea.LeftArmTop,
+        LandingArea.RightArmTop
+        };
+        var area = candidates[Random.Range(0, candidates.Length)];
+
+        // Map area -> bone + local offset
+        Vector3 localOffset = Vector3.zero;
+        switch (area)
+        {
+            case LandingArea.HeadTop:
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.Head);
+                localOffset = new Vector3(0f, upOffset, 0f); // top of head
+                break;
+
+            case LandingArea.ChestFront:
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.Chest)
+                           ?? anim.GetBoneTransform(HumanBodyBones.UpperChest)
+                           ?? anim.GetBoneTransform(HumanBodyBones.Spine);
+                localOffset = new Vector3(0f, 0f, fwdOffset); // front of chest
+                break;
+
+            case LandingArea.LeftShoulderFront:
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+                localOffset = new Vector3(0f, 0f, fwdOffset); // shoulder front
+                break;
+
+            case LandingArea.RightShoulderFront:
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                localOffset = new Vector3(0f, 0f, fwdOffset); // shoulder front
+                break;
+
+            case LandingArea.LeftArmTop:
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.LeftLowerArm)
+                           ?? anim.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+                localOffset = new Vector3(0f, upOffset, 0f); // top of arm
+                break;
+
+            case LandingArea.RightArmTop:
+                chosenBone = anim.GetBoneTransform(HumanBodyBones.RightLowerArm)
+                           ?? anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                localOffset = new Vector3(0f, upOffset, 0f); // top of arm
+                break;
+        }
+
+        // If we couldn't find that bone, fall back to any valid bone you already picked
+        if (chosenBone == null)
+            chosenBone = bodyTarget != null ? bodyTarget : characterRoot;
+
+        // Convert local offset to world space → respects player rotation
+        return chosenBone != null ? chosenBone.TransformPoint(localOffset) : transform.position;
+    }
 
     void LandOnTarget()
     {
         if (isLanded) return;
 
-        Debug.Log($"🦟 LANDING ON: {bodyTarget.name}");
+        Debug.Log($"🦟 LANDING (randomized)");
 
         isLanded = true;
-        landedPosition = bodyTarget.position;
+
+        // You set these two numbers:
+        float up = 0.20f;      // meters upward for "top" landings
+        float fwd = 0.25f;     // meters forward for "front" landings
+
+        Animator anim = characterRoot.GetComponent<Animator>();
+        landedPosition = GetRandomLandingPosition(anim, out bodyTarget, up, fwd);
+
         transform.position = landedPosition;
 
-        // Make bigger when landed
-        transform.localScale = Vector3.one * 25.0f;  // Much bigger!
+        // Keep whatever scale behavior you already use
+        transform.localScale = Vector3.one * 25.0f;
+
         StartCoroutine(FlyAwayAfterTime(landDuration));
     }
+
 
     void PickNewOffset()
     {
