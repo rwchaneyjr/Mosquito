@@ -238,7 +238,7 @@ MonoBehaviour:
   speed: 2
   initialApproachSpeed: 4
   landDuration: 3
-  landCheckRadius: 0.5
+  landCheckRadius: 1
 --- !u!1001 &7774008317753202052
 PrefabInstance:
   m_ObjectHideFlags: 0

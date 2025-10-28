@@ -1,106 +1,158 @@
 ﻿using UnityEngine;
 using TMPro;
 
-[RequireComponent(typeof(Animator))]
+// Put this on your character
 public class PlayerIKSlapper : MonoBehaviour
 {
-    [Header("Camera & IK Target")]
     public Camera cam;
     public Transform rightHandTarget;
-    public float handDistance = 2.0f;
-
-    [Header("Slap Settings")]
-    public float slapReach = 0.35f;
-    public float slapSpeed = 10f;
-    public AudioClip slapSound;
-    public LayerMask hitMask;
-    public TMP_Text scoreText;
+    public float handDistance = 2.0f;      // How far from camera
+    public float slapDistance = 0.5f;      // How far forward to slap
+    public float slapSpeed = 15f;          // How fast to slap
+    public TMP_Text scoreText;  // Drag your UI text here in Inspector
 
     private Animator anim;
-    private AudioSource audioSrc;
-    private int score;
-    private bool isSlapping;
+    private int score = 0;
+    private bool isSlapping = false;
 
     void Start()
     {
+        Debug.Log("========================================");
+        Debug.Log("PLAYERIKSLAPPER STARTING");
+        Debug.Log($"GameObject name: {gameObject.name}");
+
         anim = GetComponent<Animator>();
-        audioSrc = gameObject.AddComponent<AudioSource>();
-        if (!cam) cam = Camera.main;
-        if (!rightHandTarget)
+
+        if (cam == null)
         {
-            rightHandTarget = new GameObject("RightHandTarget").transform;
-            rightHandTarget.position = transform.position + transform.forward * 1.5f;
+            cam = Camera.main;
         }
+
+        // Create the hand target if it doesn't exist
+        if (rightHandTarget == null)
+        {
+            Debug.Log("Creating RightHandTarget...");
+            rightHandTarget = new GameObject("RightHandTarget").transform;
+        }
+
+        Debug.Log($"RightHandTarget: {rightHandTarget.name}");
+
+        // Check if scoreText is assigned
+        if (scoreText == null)
+        {
+            Debug.LogError("❌❌❌ SCORE TEXT IS NULL! You must drag your UI Text into the 'Score Text' field!");
+        }
+        else
+        {
+            Debug.Log($"✓ Score Text assigned: {scoreText.name}");
+        }
+
         UpdateScoreUI();
+        Debug.Log("========================================");
     }
 
     void Update()
     {
-        // Move IK target to mouse point in front of camera
+        // Make hand follow mouse
         Ray ray = cam.ScreenPointToRay(Input.mousePosition);
         rightHandTarget.position = ray.GetPoint(handDistance);
         rightHandTarget.rotation = transform.rotation;
 
+        // Click to slap
         if (Input.GetMouseButtonDown(0) && !isSlapping)
-            StartCoroutine(SlapMotion(ray));
+        {
+            StartCoroutine(SlapMotion());
+        }
     }
 
-    System.Collections.IEnumerator SlapMotion(Ray ray)
+    // Slapping animation
+    System.Collections.IEnumerator SlapMotion()
     {
         isSlapping = true;
-        Vector3 start = rightHandTarget.position;
-        Vector3 forward = ray.direction * slapReach;
-        Vector3 end = start + forward;
 
+        Vector3 startPos = rightHandTarget.position;
+        Vector3 forwardPos = startPos + cam.transform.forward * slapDistance;
+
+        // Slap forward
         float t = 0;
         while (t < 1f)
         {
             t += Time.deltaTime * slapSpeed;
-            rightHandTarget.position = Vector3.Lerp(start, end, t);
+            rightHandTarget.position = Vector3.Lerp(startPos, forwardPos, t);
             yield return null;
         }
 
-        audioSrc.PlayOneShot(slapSound);
-
-        // Raycast for mosquitoes or body parts hit
-       if (Physics.Raycast(ray, out RaycastHit hit, 3f, hitMask))
-        {
-            if (hit.collider.CompareTag("pseudo"))
-            {
-              //  Destroy(hit.collider.gameObject);
-                score += 10;
-                UpdateScoreUI();
-            }
-        }
-    
-
-        // Return hand
+        // Return back
         t = 0;
         while (t < 1f)
         {
             t += Time.deltaTime * slapSpeed;
-            rightHandTarget.position = Vector3.Lerp(end, start, t);
+            rightHandTarget.position = Vector3.Lerp(forwardPos, startPos, t);
             yield return null;
         }
+
         isSlapping = false;
     }
 
-    
     void OnAnimatorIK(int layerIndex)
     {
-        // These must be 1 to make the IK take full control of the hand
+        // Make hand reach toward target
         anim.SetIKPositionWeight(AvatarIKGoal.RightHand, 1);
         anim.SetIKRotationWeight(AvatarIKGoal.RightHand, 1);
-
-        // These apply the position and rotation from your Update()
         anim.SetIKPosition(AvatarIKGoal.RightHand, rightHandTarget.position);
         anim.SetIKRotation(AvatarIKGoal.RightHand, rightHandTarget.rotation);
     }
-    // Add this public method
+
+    // Call this to add points
     public void AddScore(int points)
     {
+        Debug.Log($"========================================");
+        Debug.Log($"AddScore({points}) called!");
+        Debug.Log($"Score BEFORE: {score}");
+
         score += points;
+
+        Debug.Log($"Score AFTER: {score}");
+
         UpdateScoreUI();
+
+        Debug.Log($"========================================");
     }
-    void UpdateScoreUI() => scoreText.text = "Score: " + score;
+
+    void UpdateScoreUI()
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = "Score: " + score;
+            Debug.Log($"UI updated to: Score: {score}");
+        }
+        else
+        {
+            Debug.LogError("❌ Cannot update UI - scoreText is NULL!");
+        }
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

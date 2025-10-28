@@ -12,7 +12,7 @@ public class MosquitoLanding : MonoBehaviour
     public float initialApproachSpeed = 4f;
 
     [Header("Landing Settings")]
-    public float landDuration = 3f;
+    public float landDuration = 20f;
     public float landCheckRadius = 0.5f;
 
     // Internal state
@@ -24,40 +24,27 @@ public class MosquitoLanding : MonoBehaviour
     private Vector3 landedPosition;
 
     // Standard Humanoid bone names
+    // ONLY FRONT BONES
     private readonly HumanBodyBones[] humanoidBones = new HumanBodyBones[]
- {
-        HumanBodyBones.Head,
-        HumanBodyBones.Neck,
-        HumanBodyBones.Chest,
-        HumanBodyBones.UpperChest,
-        HumanBodyBones.Spine,
-        HumanBodyBones.LeftUpperArm,
-        HumanBodyBones.RightUpperArm,
-        HumanBodyBones.LeftLowerArm,
-        HumanBodyBones.RightLowerArm,
-        HumanBodyBones.LeftUpperLeg,
-        HumanBodyBones.RightUpperLeg,
-        HumanBodyBones.LeftLowerLeg,
-        HumanBodyBones.RightLowerLeg
- };
+    {
+    HumanBodyBones.Head,
+    HumanBodyBones.Neck,
+    HumanBodyBones.Chest,
+    HumanBodyBones.UpperChest,
+    HumanBodyBones.LeftShoulder,      // LEFT SHOULDER
+    HumanBodyBones.RightShoulder,     // RIGHT SHOULDER
+    HumanBodyBones.LeftUpperArm
+    };
 
-    // Mixamo bone names - Face, throat, chest, arms, legs
     private readonly string[] mixamoBones = new string[]
     {
-        "mixamorig:Head",          // Face/head area
-        "mixamorig:HeadTop_End",   // Top of head
-        "mixamorig:Neck",          // Throat/neck
-        "mixamorig:Spine2",        // Upper chest
-        "mixamorig:Spine1",        // Mid chest
-        "mixamorig:Spine",         // Lower chest
-        "mixamorig:LeftArm",
-        "mixamorig:RightArm",
-        "mixamorig:LeftForeArm",
-        "mixamorig:RightForeArm",
-        "mixamorig:LeftUpLeg",
-        "mixamorig:RightUpLeg",
-        "mixamorig:LeftLeg",
-        "mixamorig:RightLeg"
+    "mixamorig:Head",
+    "mixamorig:Neck",
+    "mixamorig:Spine2",  // Upper chest
+    "mixamorig:Spine1",
+    "mixamorig:LeftShoulder",         // LEFT SHOULDER
+     "mixamorig:RightShoulder",        // RIGHT SHOULDER
+     "mixamorig:LeftArm"// Mid chest
     };
 
     void Start()
@@ -249,16 +236,27 @@ public class MosquitoLanding : MonoBehaviour
     {
         if (isLanded) return;
 
-        Debug.Log($"🦟 LANDING ON: {bodyTarget.name}");
+        Debug.Log("========================================");
+        Debug.Log($"🦟🦟🦟 LANDING ON: {bodyTarget.name}");
+
+        // ADD OFFSET: -1 pushes AWAY from camera, onto character body
+        Vector3 forwardOffset = Camera.main.transform.forward * -.25f;
+        landedPosition = bodyTarget.position + forwardOffset;
+
+        Debug.Log($"Position: {landedPosition}");
+        Debug.Log($"Will stay landed for {landDuration} seconds");
+        Debug.Log("========================================");
 
         isLanded = true;
-        landedPosition = bodyTarget.position;
         transform.position = landedPosition;
 
-        // Make bigger when landed
-        transform.localScale = Vector3.one * 25.0f;  // Much bigger!
+        // Make MASSIVE when landed - easy to see and hit!
+        transform.localScale = Vector3.one * 8.0f;
+        Debug.Log($"✓ Scale increased to: {transform.localScale.x}");
+
         StartCoroutine(FlyAwayAfterTime(landDuration));
     }
+
 
     void PickNewOffset()
     {
@@ -309,3 +307,8 @@ public class MosquitoLanding : MonoBehaviour
         }
     }
 }
+
+
+
+
+
